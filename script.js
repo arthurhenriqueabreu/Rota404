@@ -1,393 +1,297 @@
-const appState = {
-  marketName: "",
-  baseAddress: "",
-  vehicleType: "",
-  fuelEfficiencyKmL: 0,
-  fuelPrice: 0,
-  driverHourlyCost: 0,
-  defaultDeliveryFee: 0,
-  deliveries: [],
-  currentStep: "marketName"
+const state = {
+  step: "idle",
+  combustivel: null,
+  veiculo: null,
+  tamanho: null,
+  enderecoLoja: null,
+  qtdParadas: null,
+  enderecos: [],
+  enderecoAtual: 0
 };
 
-const conversation = {
-  id: "rotalucro",
-  name: "RotaLucro Assistente",
-  initials: "RL",
-  status: "Assistente de entregas online",
-  color: "#d9fdd3",
-  ink: "#008069",
-  time: "Agora",
-  unread: 0,
-  messages: []
-};
+const msgs = document.getElementById("messages");
+const input = document.getElementById("userInput");
+const sendBtn = document.getElementById("sendBtn");
 
-const app = document.querySelector(".app");
-const list = document.querySelector("#conversation-list");
-const messages = document.querySelector("#messages");
-const contactAvatar = document.querySelector("#contact-avatar");
-const contactName = document.querySelector("#contact-name");
-const contactStatus = document.querySelector("#contact-status");
-const composer = document.querySelector("#composer");
-const messageInput = document.querySelector("#new-message");
-const search = document.querySelector("#search");
-const back = document.querySelector("#back");
-const quickActions = document.querySelector("#quick-actions");
-const loadDemoButton = document.querySelector("#load-demo");
-let deliveryDraft = {};
-let routeSummary = null;
-
-function escapeHtml(text) {
-  return String(text).replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  })[character]);
+function scrollDown() {
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
-function timeNow() {
-  return new Date().toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+function getTime() {
+  return new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function normalizeText(text) {
-  return text.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
+function addMessage(who, content, isHTML = false) {
+  const row = document.createElement("div");
+  row.className = `bubble-row ${who}`;
 
-function parseNumber(text) {
-  const value = Number.parseFloat(text.trim().replace(",", "."));
-  return Number.isFinite(value) && value > 0 ? value : null;
-}
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
 
-function formatCurrency(value) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL"
-  });
-}
-
-function formatKm(value) {
-  return `${value.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
-}
-
-function formatMinutes(value) {
-  if (value < 60) {
-    return `${Math.round(value)} min`;
+  if (isHTML) {
+    bubble.innerHTML = content;
+  } else {
+    bubble.textContent = content;
   }
 
-  const hours = Math.floor(value / 60);
-  const minutes = Math.round(value % 60);
-  return minutes ? `${hours} h ${minutes} min` : `${hours} h`;
-}
+  const time = document.createElement("div");
+  time.className = "bubble-time";
+  time.textContent = getTime();
 
-function previewText() {
-  const lastMessage = conversation.messages.at(-1);
-  if (!lastMessage) {
-    return "Comece seu planejamento de entregas";
+  const wrap = document.createElement("div");
+  wrap.appendChild(bubble);
+  wrap.appendChild(time);
+
+  if (who === "bot") {
+    const avatar = document.createElement("div");
+    avatar.className = "bubble-avatar";
+    avatar.textContent = "\u{1F69A}";
+    row.appendChild(avatar);
   }
 
-  return `${lastMessage.sent ? "Você: " : ""}${lastMessage.text}`;
-}
-
-function renderList(query = "") {
-  const visible = conversation.name.toLowerCase().includes(query.trim().toLowerCase());
-  list.innerHTML = visible ? `
-    <article class="conversation selected" data-id="${conversation.id}" tabindex="0">
-      <div class="avatar" style="background:${conversation.color}; color:${conversation.ink}">${conversation.initials}</div>
-      <div class="conversation-content">
-        <h3>${escapeHtml(conversation.name)}</h3>
-        <time>${escapeHtml(conversation.time)}</time>
-        <p class="preview">${escapeHtml(previewText())}</p>
-      </div>
-    </article>
-  ` : "";
-}
-
-function renderMessages() {
-  contactAvatar.textContent = conversation.initials;
-  contactAvatar.style.background = conversation.color;
-  contactAvatar.style.color = conversation.ink;
-  contactName.textContent = conversation.name;
-  contactStatus.textContent = conversation.status;
-
-  messages.innerHTML = `
-    <div class="date-pill">Hoje</div>
-    ${conversation.messages.map((message) => `
-      <div class="message ${message.sent ? "sent" : ""}">
-        <p>${escapeHtml(message.text)}</p>
-        <time>${escapeHtml(message.time)}${message.sent ? '<span class="checks">&#10003;&#10003;</span>' : ""}</time>
-      </div>
-    `).join("")}
-    ${routeSummary ? renderSummary() : ""}
-  `;
-  quickActions.hidden = appState.currentStep !== "deliveryDecision";
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function addBotMessage(text) {
-  conversation.messages.push({ text, time: timeNow(), sent: false });
-  conversation.time = timeNow();
+  row.appendChild(wrap);
+  msgs.appendChild(row);
+  scrollDown();
+  return bubble;
 }
 
 function addUserMessage(text) {
-  conversation.messages.push({ text, time: timeNow(), sent: true });
-  conversation.time = timeNow();
+  const row = document.createElement("div");
+  row.className = "bubble-row user";
+  const wrap = document.createElement("div");
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
+  const time = document.createElement("div");
+  time.className = "bubble-time";
+  time.textContent = getTime();
+  wrap.appendChild(bubble);
+  wrap.appendChild(time);
+  row.appendChild(wrap);
+  msgs.appendChild(row);
+  scrollDown();
 }
 
-function refreshConversation() {
-  renderList(search.value);
-  renderMessages();
+function showTyping(ms = 1200) {
+  return new Promise((resolve) => {
+    const row = document.createElement("div");
+    row.className = "bubble-row bot";
+    const avatar = document.createElement("div");
+    avatar.className = "bubble-avatar";
+    avatar.textContent = "\u{1F69A}";
+    const indicator = document.createElement("div");
+    indicator.className = "typing-indicator";
+    indicator.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+    row.appendChild(avatar);
+    row.appendChild(indicator);
+    msgs.appendChild(row);
+    scrollDown();
+    setTimeout(() => {
+      row.remove();
+      resolve();
+    }, ms);
+  });
 }
 
-function askNextStep(step, question) {
-  appState.currentStep = step;
-  addBotMessage(question);
+function addOptions(options, callback) {
+  const row = document.createElement("div");
+  row.className = "options-row";
+  options.forEach((option) => {
+    const button = document.createElement("button");
+    button.className = "option-btn";
+    button.textContent = option;
+    button.onclick = () => {
+      row.remove();
+      addUserMessage(option);
+      callback(option);
+    };
+    row.appendChild(button);
+  });
+  msgs.appendChild(row);
+  scrollDown();
 }
 
-function handleUserInput(text) {
-  const value = text.trim();
+function calcularRota() {
+  const kmPorParada = 3 + Math.random() * 5;
+  const distanciaTotal = (state.qtdParadas * kmPorParada).toFixed(1);
+  const consumo = state.veiculo === "\u{1F6F5} Moto" ? 30 : 12;
+  const litros = (distanciaTotal / consumo).toFixed(2);
+  const custoComb = (litros * state.combustivel).toFixed(2);
+  const adicionais = { "\u{1F4E6} Pequeno": 0, "\u{1F4E6} Médio": 5, "\u{1F4E6} Grande": 12 };
+  const adicional = adicionais[state.tamanho] * state.qtdParadas;
+  const minPorParada = 15 + Math.floor(Math.random() * 10);
+  const tempoTotal = state.qtdParadas * minPorParada;
+  const horas = Math.floor(tempoTotal / 60);
+  const min = tempoTotal % 60;
+  const tempoStr = horas > 0 ? `${horas}h ${min}min` : `${min}min`;
+  const total = (parseFloat(custoComb) + adicional).toFixed(2);
+
+  return { distanciaTotal, litros, custoComb, adicional, tempoStr, total };
+}
+
+async function botRespond(userText) {
+  input.disabled = true;
+  sendBtn.disabled = true;
+
+  const txt = userText.trim().toLowerCase();
+
+  if (state.step === "idle") {
+    if (txt === "/novaentrega") {
+      await showTyping(900);
+      addMessage("bot", "\u{1F680} <strong>Nova entrega iniciada!</strong><br><br>Vamos calcular o custo do seu trajeto. Primeiro, me diga:<br><br>\u{1F4B0} Qual o <strong>preço do combustível</strong> na sua região? (R$/litro)<br><em>Ex: 5.89</em>", true);
+      state.step = "combustivel";
+    } else {
+      await showTyping(700);
+      addMessage("bot", "Para iniciar, digite <strong>/novaentrega</strong> \u{1F69A}", true);
+    }
+  } else if (state.step === "combustivel") {
+    const value = parseFloat(txt.replace(",", "."));
+    if (Number.isNaN(value) || value < 1 || value > 20) {
+      await showTyping(700);
+      addMessage("bot", "\u26A0\uFE0F Valor inválido. Digite o preço por litro. Ex: <strong>5.89</strong>", true);
+    } else {
+      state.combustivel = value;
+      await showTyping(900);
+      addMessage("bot", "\u{1F697} Qual o <strong>tipo de veículo</strong> que será usado na entrega?", true);
+      addOptions(["\u{1F6F5} Moto", "\u{1F697} Carro"], handleOption);
+      state.step = "veiculo";
+      enableInput();
+      return;
+    }
+  } else if (state.step === "veiculo") {
+    if (txt.includes("moto") || txt.includes("carro")) {
+      state.veiculo = userText;
+      await showTyping(900);
+      addMessage("bot", "\u{1F4E6} Qual o <strong>tamanho das mercadorias</strong>?", true);
+      addOptions(["\u{1F4E6} Pequeno", "\u{1F4E6} Médio", "\u{1F4E6} Grande"], handleOption);
+      state.step = "tamanho";
+      enableInput();
+      return;
+    }
+    await showTyping(600);
+    addMessage("bot", "Por favor, selecione uma das opções abaixo \u{1F447}");
+    addOptions(["\u{1F6F5} Moto", "\u{1F697} Carro"], handleOption);
+    enableInput();
+    return;
+  } else if (state.step === "tamanho") {
+    if (txt.includes("pequeno") || txt.includes("médio") || txt.includes("medio") || txt.includes("grande")) {
+      if (txt.includes("pequeno")) {
+        state.tamanho = "\u{1F4E6} Pequeno";
+      } else if (txt.includes("grande")) {
+        state.tamanho = "\u{1F4E6} Grande";
+      } else {
+        state.tamanho = "\u{1F4E6} Médio";
+      }
+      await showTyping(900);
+      addMessage("bot", "\u{1F3EA} Qual o <strong>endereço da sua loja</strong>? (ponto de partida da entrega)<br><em>Ex: Rua das Flores, 123 – Centro</em>", true);
+      state.step = "endereco_loja";
+    } else {
+      await showTyping(600);
+      addMessage("bot", "Por favor, selecione uma das opções abaixo \u{1F447}");
+      addOptions(["\u{1F4E6} Pequeno", "\u{1F4E6} Médio", "\u{1F4E6} Grande"], handleOption);
+      enableInput();
+      return;
+    }
+  } else if (state.step === "endereco_loja") {
+    if (txt.length < 5) {
+      await showTyping(600);
+      addMessage("bot", "\u26A0\uFE0F Endereço muito curto. Tente novamente.");
+    } else {
+      state.enderecoLoja = userText;
+      await showTyping(900);
+      addMessage("bot", `\u2705 Loja registrada: <strong>${userText}</strong><br><br>\u{1F4CD} Quantas <strong>residências/pontos de entrega</strong> serão visitados?<br><em>Ex: 3</em>`, true);
+      state.step = "qtd_paradas";
+    }
+  } else if (state.step === "qtd_paradas") {
+    const qtd = parseInt(txt, 10);
+    if (Number.isNaN(qtd) || qtd < 1 || qtd > 20) {
+      await showTyping(700);
+      addMessage("bot", "\u26A0\uFE0F Informe um número válido entre 1 e 20.");
+    } else {
+      state.qtdParadas = qtd;
+      state.enderecos = [];
+      state.enderecoAtual = 0;
+      await showTyping(900);
+      addMessage("bot", `\u{1F4EC} Ótimo! Vou precisar do endereço de cada cliente.<br><br>Digite o endereço do <strong>cliente 1</strong> de ${qtd}:`, true);
+      state.step = "enderecos";
+    }
+  } else if (state.step === "enderecos") {
+    if (txt.length < 5) {
+      await showTyping(600);
+      addMessage("bot", "\u26A0\uFE0F Endereço muito curto. Tente novamente.");
+    } else {
+      state.enderecos.push(userText);
+      state.enderecoAtual++;
+      if (state.enderecoAtual < state.qtdParadas) {
+        await showTyping(800);
+        addMessage("bot", `\u2705 Endereço ${state.enderecoAtual} registrado!<br><br>Agora o endereço do <strong>cliente ${state.enderecoAtual + 1}</strong> de ${state.qtdParadas}:`, true);
+      } else {
+        await showTyping(500);
+        addMessage("bot", `\u2705 Todos os ${state.qtdParadas} endereços registrados!<br><br>\u{1F504} Calculando a melhor rota...`, true);
+        state.step = "calculando";
+        await showTyping(2200);
+
+        const result = calcularRota();
+        const endList = state.enderecos.map((address) => `<li>\u{1F4CD} ${address}</li>`).join("");
+        const html = `
+          <div class="result-card">
+            <div class="result-title">\u{1F4CA} Relatório da Rota</div>
+            <div class="result-row"><span class="result-label">\u{1F3EA} Ponto de partida</span><span class="result-value" style="font-size:12px;text-align:right;max-width:55%">${state.enderecoLoja}</span></div>
+            <div class="result-row"><span class="result-label">\u{1F5FA}\uFE0F Distância estimada</span><span class="result-value">${result.distanciaTotal} km</span></div>
+            <div class="result-row"><span class="result-label">\u26FD Combustível</span><span class="result-value">${result.litros}L · R$ ${result.custoComb}</span></div>
+            <div class="result-row"><span class="result-label">\u{1F4E6} Adicional carga</span><span class="result-value">R$ ${result.adicional.toFixed(2)}</span></div>
+            <div class="result-row"><span class="result-label">\u23F1\uFE0F Tempo estimado</span><span class="result-value">${result.tempoStr}</span></div>
+            <div class="result-row"><span class="result-label">\u{1F3E0} Paradas</span><span class="result-value">${state.qtdParadas} entregas</span></div>
+            <div class="result-row"><span class="result-label result-total">\u{1F4B0} Custo total estimado</span><span class="result-value result-total">R$ ${result.total}</span></div>
+          </div>
+          <br>\u{1F4CB} <strong>Endereços da rota:</strong><ul>${endList}</ul>
+        `;
+        addMessage("bot", html, true);
+
+        await showTyping(1000);
+        addMessage("bot", "\u2705 Rota calculada com sucesso! Boas entregas! \u{1F680}<br><br>Para calcular uma nova rota, digite <strong>/novaentrega</strong>.", true);
+
+        Object.assign(state, {
+          step: "idle",
+          combustivel: null,
+          veiculo: null,
+          tamanho: null,
+          enderecoLoja: null,
+          qtdParadas: null,
+          enderecos: [],
+          enderecoAtual: 0
+        });
+      }
+    }
+  }
+
+  enableInput();
+}
+
+function enableInput() {
+  input.disabled = false;
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+function handleOption(option) {
+  botRespond(option);
+}
+
+function sendMessage() {
+  const value = input.value.trim();
   if (!value) {
     return;
   }
-
   addUserMessage(value);
-  if (appState.currentStep.startsWith("delivery") || appState.currentStep === "deliveryDecision") {
-    addDeliveryFlow(value);
-  } else if (appState.currentStep === "complete") {
-    addBotMessage("A rota já está calculada. Use Carregar demo para visualizar outro exemplo.");
-  } else {
-    advanceFlow(value);
-  }
-  refreshConversation();
+  input.value = "";
+  botRespond(value);
 }
 
-function advanceFlow(text) {
-  if (appState.currentStep === "marketName") {
-    appState.marketName = text;
-    askNextStep("baseAddress", "Qual o endereço de saída do entregador?");
-    return;
-  }
-
-  if (appState.currentStep === "baseAddress") {
-    appState.baseAddress = text;
-    askNextStep("vehicleType", "Qual veículo será usado? Ex: moto, carro ou bicicleta.");
-    return;
-  }
-
-  if (appState.currentStep === "vehicleType") {
-    appState.vehicleType = text;
-    askNextStep("fuelEfficiencyKmL", "Quantos km por litro esse veículo faz? Ex: 35");
-    return;
-  }
-
-  const number = parseNumber(text);
-  if (!number) {
-    addBotMessage("Informe um número maior que zero, por favor.");
-    return;
-  }
-
-  if (appState.currentStep === "fuelEfficiencyKmL") {
-    appState.fuelEfficiencyKmL = number;
-    askNextStep("fuelPrice", "Qual o preço atual do combustível? Ex: 5.90");
-  } else if (appState.currentStep === "fuelPrice") {
-    appState.fuelPrice = number;
-    askNextStep("driverHourlyCost", "Quanto custa a hora do entregador? Ex: 12");
-  } else if (appState.currentStep === "driverHourlyCost") {
-    appState.driverHourlyCost = number;
-    askNextStep("defaultDeliveryFee", "Qual o frete padrão cobrado por entrega? Ex: 8");
-  } else if (appState.currentStep === "defaultDeliveryFee") {
-    appState.defaultDeliveryFee = number;
-    addBotMessage("Dados do mercado cadastrados. Agora vamos incluir as entregas.");
-    askNextStep("deliveryCustomerName", "Qual o nome do cliente da primeira entrega?");
-  }
-}
-
-function addDeliveryFlow(text) {
-  if (appState.currentStep === "deliveryCustomerName") {
-    deliveryDraft.customerName = text;
-    askNextStep("deliveryAddress", "Qual o endereço da entrega?");
-    return;
-  }
-
-  if (appState.currentStep === "deliveryAddress") {
-    deliveryDraft.address = text;
-    askNextStep("deliverySize", "Qual o tamanho da entrega? Pequena, média ou grande.");
-    return;
-  }
-
-  if (appState.currentStep === "deliverySize") {
-    const size = normalizeText(text);
-    if (!["pequena", "media", "grande"].includes(size)) {
-      addBotMessage("Escolha um tamanho: pequena, média ou grande.");
-      return;
-    }
-    deliveryDraft.size = size;
-    askNextStep(
-      "deliveryFee",
-      `Qual o frete cobrado para esta entrega? Ex: ${formatCurrency(appState.defaultDeliveryFee)}`
-    );
-    return;
-  }
-
-  if (appState.currentStep === "deliveryFee") {
-    const deliveryFee = parseNumber(text);
-    if (!deliveryFee) {
-      addBotMessage("Informe o valor do frete em número. Ex: 8");
-      return;
-    }
-    deliveryDraft.deliveryFee = deliveryFee;
-    appState.deliveries.push({ ...deliveryDraft });
-    deliveryDraft = {};
-    addBotMessage(`Entrega cadastrada! Você tem ${appState.deliveries.length} entrega(s) na rota.`);
-    askNextStep("deliveryDecision", "Deseja adicionar outra entrega ou calcular rota?");
-    return;
-  }
-
-  const action = normalizeText(text);
-  if (action.includes("adicionar")) {
-    askNextStep("deliveryCustomerName", "Qual o nome do cliente da próxima entrega?");
-  } else if (action.includes("calcular")) {
-    calculateRoute();
-  } else {
-    addBotMessage("Use uma das opções: Adicionar entrega ou Calcular rota.");
-  }
-}
-
-function calculateRoute() {
-  if (!appState.deliveries.length) {
-    addBotMessage("Cadastre ao menos uma entrega antes de calcular a rota.");
-    return null;
-  }
-
-  const distancePerSize = { pequena: 2.5, media: 3.5, grande: 5 };
-  const distanceKm = appState.deliveries.reduce(
-    (total, delivery) => total + distancePerSize[delivery.size],
-    0
-  );
-  const timeMin = distanceKm * 3;
-  const litersUsed = distanceKm / appState.fuelEfficiencyKmL;
-  const fuelCost = litersUsed * appState.fuelPrice;
-  const driverCost = (timeMin / 60) * appState.driverHourlyCost;
-  const totalCost = fuelCost + driverCost;
-  const totalFees = appState.deliveries.reduce((total, delivery) => total + delivery.deliveryFee, 0);
-  const balance = totalFees - totalCost;
-
-  routeSummary = {
-    distanceKm,
-    timeMin,
-    fuelCost,
-    driverCost,
-    totalCost,
-    totalFees,
-    balance,
-    profitable: balance >= 0
-  };
-  appState.currentStep = "complete";
-  addBotMessage("Rota calculada! Confira abaixo a estimativa de resultado.");
-  return routeSummary;
-}
-
-function renderSummary() {
-  const status = routeSummary.profitable ? "Lucro" : "Prejuízo";
-  return `
-    <section class="summary-card" aria-label="Resumo da rota calculada">
-      <h3>Resumo da rota</h3>
-      <p class="route-note">Estimativa mockada, sem mapa ou trânsito real.</p>
-      <dl class="summary-grid">
-        <dt>Mercado</dt><dd>${escapeHtml(appState.marketName)}</dd>
-        <dt>Endereço base</dt><dd>${escapeHtml(appState.baseAddress)}</dd>
-        <dt>Veículo</dt><dd>${escapeHtml(appState.vehicleType)}</dd>
-        <dt>Consumo</dt><dd>${formatKm(appState.fuelEfficiencyKmL)}/L</dd>
-        <dt>Gasolina</dt><dd>${formatCurrency(appState.fuelPrice)}/L</dd>
-        <dt>Hora do entregador</dt><dd>${formatCurrency(appState.driverHourlyCost)}</dd>
-        <dt>Quantidade de entregas</dt><dd>${appState.deliveries.length}</dd>
-        <dt>Frete por entrega</dt><dd>${formatCurrency(appState.defaultDeliveryFee)}</dd>
-        <dt>Distância total</dt><dd>${formatKm(routeSummary.distanceKm)}</dd>
-        <dt>Tempo estimado</dt><dd>${formatMinutes(routeSummary.timeMin)}</dd>
-        <dt>Custo de combustível</dt><dd>${formatCurrency(routeSummary.fuelCost)}</dd>
-        <dt>Custo do entregador</dt><dd>${formatCurrency(routeSummary.driverCost)}</dd>
-        <dt class="summary-total">Custo total</dt><dd class="summary-total">${formatCurrency(routeSummary.totalCost)}</dd>
-        <dt>Frete recebido</dt><dd>${formatCurrency(routeSummary.totalFees)}</dd>
-        <dt class="summary-total">Saldo estimado</dt><dd class="summary-total">${formatCurrency(routeSummary.balance)}</dd>
-      </dl>
-      <span class="summary-status ${routeSummary.profitable ? "" : "loss"}">Status: ${status}</span>
-      <p class="summary-message">O Google Maps mostra o caminho. O RotaLucro mostra se a entrega compensa.</p>
-    </section>
-  `;
-}
-
-function loadDemo() {
-  Object.assign(appState, {
-    marketName: "Mercadinho Bom Retiro",
-    baseAddress: "Rua Blumenau, 100 - Joinville",
-    vehicleType: "Moto",
-    fuelEfficiencyKmL: 35,
-    fuelPrice: 5.90,
-    driverHourlyCost: 12,
-    defaultDeliveryFee: 8,
-    deliveries: [
-      { customerName: "Ana Souza", address: "Rua Max Colin, 420 - Joinville", size: "pequena", deliveryFee: 8 },
-      { customerName: "Padaria Central", address: "Rua Dona Francisca, 250 - Joinville", size: "media", deliveryFee: 8 },
-      { customerName: "João Lima", address: "Rua XV de Novembro, 880 - Joinville", size: "pequena", deliveryFee: 8 },
-      { customerName: "Restaurante Sabor", address: "Rua Otto Boehm, 95 - Joinville", size: "grande", deliveryFee: 8 },
-      { customerName: "Marina Costa", address: "Rua Blumenau, 920 - Joinville", size: "media", deliveryFee: 8 }
-    ],
-    currentStep: "deliveryDecision"
-  });
-  deliveryDraft = {};
-  routeSummary = null;
-  conversation.messages = [
-    { text: "Olá! Eu sou o RotaLucro. Vamos montar sua rota de entregas?", time: timeNow(), sent: false },
-    { text: "Demo carregada com 5 entregas do Mercadinho Bom Retiro.", time: timeNow(), sent: false }
-  ];
-  calculateRoute();
-  app.classList.add("open-chat");
-  refreshConversation();
-}
-
-function startConversation() {
-  conversation.messages = [
-    { text: "Olá! Eu sou o RotaLucro. Vamos montar sua rota de entregas?", time: timeNow(), sent: false },
-    { text: "Vou te ajudar a calcular custo, frete e lucro da sua rota.", time: timeNow(), sent: false },
-    { text: "Qual o nome do mercado?", time: timeNow(), sent: false }
-  ];
-}
-
-list.addEventListener("click", (event) => {
-  if (event.target.closest(".conversation")) {
-    app.classList.add("open-chat");
+sendBtn.addEventListener("click", sendMessage);
+input.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    sendMessage();
   }
 });
-
-list.addEventListener("keydown", (event) => {
-  if (event.target.closest(".conversation") && (event.key === "Enter" || event.key === " ")) {
-    event.preventDefault();
-    app.classList.add("open-chat");
-  }
-});
-
-search.addEventListener("input", () => renderList(search.value));
-
-composer.addEventListener("submit", (event) => {
-  event.preventDefault();
-  handleUserInput(messageInput.value);
-  messageInput.value = "";
-});
-
-quickActions.addEventListener("click", (event) => {
-  const action = event.target.dataset.action;
-  if (action) {
-    handleUserInput(action);
-  }
-});
-
-loadDemoButton.addEventListener("click", loadDemo);
-back.addEventListener("click", () => app.classList.remove("open-chat"));
-
-startConversation();
-renderList();
-renderMessages();
+input.focus();
