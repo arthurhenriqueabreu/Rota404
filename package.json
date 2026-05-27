@@ -1,0 +1,27 @@
+{
+  "name": "rota404",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "bot": "node bot.js",
+    "web": "echo Abra o index.html no navegador"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arthurhenriqueabreu/Rota404.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "telegraf": "^4.16.3"
+  },
+  "bugs": {
+    "url": "https://github.com/arthurhenriqueabreu/Rota404/issues"
+  },
+  "homepage": "https://github.com/arthurhenriqueabreu/Rota404#readme"
+}
