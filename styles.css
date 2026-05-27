@@ -480,6 +480,16 @@ button {
   color: #be3c32;
 }
 
+.summary-message {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: #008069;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 .quick-actions {
   display: flex;
   gap: 9px;
