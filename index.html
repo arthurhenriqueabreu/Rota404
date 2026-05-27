@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RotaLucro - Assistente de Entregas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app" aria-label="Tela simulada do WhatsApp">
+      <aside class="sidebar">
+        <header class="sidebar-header">
+          <div class="avatar profile" aria-label="Seu perfil">ML</div>
+          <div class="header-actions" aria-label="Ações">
+            <button class="icon-button status" aria-label="Status"></button>
+            <button class="icon-button chat" aria-label="Nova conversa"></button>
+            <button class="icon-button menu" aria-label="Menu"></button>
+          </div>
+        </header>
+
+        <section class="inbox-top">
+          <h1>Conversas</h1>
+          <label class="search">
+            <span class="search-icon" aria-hidden="true"></span>
+            <input id="search" type="search" placeholder="Pesquisar ou começar uma nova conversa">
+          </label>
+          <div class="filters" aria-label="Filtros de conversas">
+            <button class="filter active">Todas</button>
+            <button class="filter">Não lidas</button>
+            <button class="filter">Favoritas</button>
+          </div>
+          <button class="demo-button" id="load-demo" type="button">Carregar demo</button>
+        </section>
+
+        <nav class="conversation-list" id="conversation-list" aria-label="Lista de conversas"></nav>
+      </aside>
+
+      <section class="chat-panel">
+        <header class="chat-header">
+          <button class="back" id="back" aria-label="Voltar para conversas"></button>
+          <div class="avatar active-contact" id="contact-avatar">RL</div>
+          <div class="contact-data">
+            <h2 id="contact-name">RotaLucro Assistente</h2>
+            <p id="contact-status">Assistente de entregas online</p>
+          </div>
+          <div class="header-actions chat-tools">
+            <button class="icon-button video" aria-label="Chamada de vídeo"></button>
+            <button class="icon-button call" aria-label="Chamada"></button>
+            <button class="icon-button menu" aria-label="Menu"></button>
+          </div>
+        </header>
+
+        <div class="messages" id="messages" aria-live="polite"></div>
+
+        <div class="quick-actions" id="quick-actions" aria-label="Ações rápidas" hidden>
+          <button class="quick-action" type="button" data-action="Adicionar entrega">Adicionar entrega</button>
+          <button class="quick-action primary" type="button" data-action="Calcular rota">Calcular rota</button>
+        </div>
+
+        <form class="composer" id="composer">
+          <button class="icon-button add" type="button" aria-label="Anexar"></button>
+          <label class="message-input">
+            <input id="new-message" type="text" autocomplete="off" placeholder="Digite uma resposta">
+          </label>
+          <button class="send" type="submit" aria-label="Enviar mensagem"></button>
+        </form>
+      </section>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
