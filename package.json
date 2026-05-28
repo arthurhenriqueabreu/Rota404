@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node bot.js",
     "bot": "node bot.js",
-    "web": "echo Abra o index.html no navegador"
+    "web": "echo Abra o index.html no navegador",
+    "check": "node --check bot.js && node --check script.js && node validate.js",
+    "test": "node validate.js"
   },
   "repository": {
     "type": "git",
